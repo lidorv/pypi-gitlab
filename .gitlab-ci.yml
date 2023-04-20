@@ -1,1 +1,30 @@
+default:
+  image: node:16
 
+include:
+  - remote: "https://releases.jfrog.io/artifactory/jfrog-cli/gitlab/v2/.setup-jfrog-unix.yml"
+  # For Windows agents:
+  #- remote: "https://releases.jfrog.io/artifactory/jfrog-cli/gitlab/v2/.setup-jfrog-windows.yml"
+jfrog-python-build:
+  script:
+    - !reference [.setup_jfrog, script]
+
+    # Configure JFrog Artifactory repositories
+    - jf pip-config --repo-resolve $REPOSITORY_NAME
+
+    # Resolve dependencies from JFrog Artifactory
+    - jf pip install .
+    # Package the project
+    - python setup.py sdist bdist_wheel
+    # Deploy *.tar.gz to JFrog Artifactory
+    - jf rt upload dist/ pypi/
+    # Collect environment variables for the build
+    - jf rt build-collect-env
+    # Collect VCS details from git and add them to the build
+    - jf rt build-add-git
+    # Publish build-info to JFrog Artifactory
+    - jf rt build-publish
+
+  after_script:
+    # Cleanup
+    - !reference [.cleanup_jfrog, script]`,
